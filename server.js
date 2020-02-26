@@ -9,10 +9,7 @@ const port = 8001;
 const connection = new Sequelize('test', 'root', 'root', {
   host: 'localhost',
   dialect: 'mysql',
-  operatorsAliases: false,
-  define: {
-    freezeTableName: true
-  }
+  operatorsAliases: false
 });
 
 const User = connection.define('User', {
@@ -31,14 +28,23 @@ const User = connection.define('User', {
   }
 });
 
-app.post('/post', (req, res) => {
-  const newUser = req.body.user;
-  User.create({
-    name: newUser.name,
-    email: newUser.email
+const Post = connection.define('Post', {
+  title: Sequelize.STRING,
+  content: Sequelize.TEXT
+});
+
+const Comment = connection.define('Comment', {
+  them_comment: Sequelize.STRING
+});
+
+app.get('/allposts', (req, res) => {
+  Post.findAll({
+    include: [{
+      model: User, as: 'UserRef'
+    }]
   })
-    .then(user => {
-      res.json(user)
+    .then(posts => {
+      res.json(posts)
     })
     .catch(({ message }) => {
       console.error(message);
@@ -46,10 +52,15 @@ app.post('/post', (req, res) => {
     });
 });
 
-app.get('/findOne', (req, res) => {
-  User.findByPk('55')
-    .then(user => {
-      res.json(user)
+app.get('/single-post', (req, res) => {
+  Post.findByPk('1', {
+    include: [{
+      model: Comment, as: 'All_Comments',
+      attributes: ['the_comment']
+    }]
+  })
+    .then(posts => {
+      res.json(posts)
     })
     .catch(({ message }) => {
       console.error(message);
@@ -57,69 +68,58 @@ app.get('/findOne', (req, res) => {
     });
 });
 
-app.delete('/remove', (req, res) => {
-  User.destroy({
-    where: { id: 50 }
-  })
-    .then(() => {
-      res.json({
-        status: 'success',
-        data: []
-      })
-    })
-    .catch(({ message }) => {
-      console.error(message);
-      res.status(404).send(message);
-    });
-});
-
-app.put('/update', (req, res) => {
-  User.update({
-    name: 'Michael Keaton',
-    password: 'password'
-  }, {
-    where: {
-      id: 55
-    }
-  })
-    .then(rows => {
-      res.json(rows)
-    })
-    .catch(({ message }) => {
-      console.error(message);
-      res.status(404).send(message);
-    });
-});
-
-app.get('/findall', (req, res) => {
-  User.findAll({
-    where: {
-      name: {
-        [Op.like]: 'Sy%'
-      }
-    }
-  })
-    .then(user => {
-      res.json(user)
-    })
-    .catch(({ message }) => {
-      console.error(message);
-      res.status(404).send(message);
-    });
-});
+Post.belongsTo(User, {as: 'UserRef', foreignKey: 'userId'}); // puts foreignKey UserId in Post table
+Post.hasMany(Comment, { as: 'All_Comments' }); // foreignKey = PostId in Comment table
 
 connection
   .sync({
+    force: true,
     logging: console.log
   })
   .then(() => {
-    /*User.bulkCreate(_USERS)
+    User.bulkCreate(_USERS)
       .then(users => {
         console.log('Users added')
       })
-      .then(err => {
+      .catch(err => {
         console.log(err);
-      })*/
+      })
+  })
+  .then(() => {
+    Post.create({
+      userId: 1,
+      title: 'Third post',
+      content: 'post content 2'
+    })
+  })
+  .then(() => {
+    Post.create({
+      userId: 1,
+      title: 'First post',
+      content: 'post content 3'
+    })
+  })
+  .then(() => {
+    Post.create({
+      userId: 2,
+      title: 'Second post',
+      content: 'first content 2'
+    })
+  })
+  .then(() => {
+    Comment.create({
+      PostId: 1,
+      the_comment: 'second comment'
+    })
+  })
+  .then(() => {
+    Comment.create({
+      PostId: 2,
+      the_comment: 'First comment'
+    })
+  })
+  .then(err => {
+    console.log(err);
   })
   .then(() => {
     console.log('DB connected')
