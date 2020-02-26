@@ -1,6 +1,7 @@
 const express = require('express');
 const Sequelize = require('sequelize');
 const _USERS = require('./users');
+const Op = Sequelize.Op;
 
 const app = express();
 const port = 8001;
@@ -45,9 +46,58 @@ app.post('/post', (req, res) => {
     });
 });
 
+app.get('/findOne', (req, res) => {
+  User.findByPk('55')
+    .then(user => {
+      res.json(user)
+    })
+    .catch(({ message }) => {
+      console.error(message);
+      res.status(404).send(message);
+    });
+});
+
+app.delete('/remove', (req, res) => {
+  User.destroy({
+    where: { id: 50 }
+  })
+    .then(() => {
+      res.json({
+        status: 'success',
+        data: []
+      })
+    })
+    .catch(({ message }) => {
+      console.error(message);
+      res.status(404).send(message);
+    });
+});
+
+app.put('/update', (req, res) => {
+  User.update({
+    name: 'Michael Keaton',
+    password: 'password'
+  }, {
+    where: {
+      id: 55
+    }
+  })
+    .then(rows => {
+      res.json(rows)
+    })
+    .catch(({ message }) => {
+      console.error(message);
+      res.status(404).send(message);
+    });
+});
+
 app.get('/findall', (req, res) => {
   User.findAll({
-
+    where: {
+      name: {
+        [Op.like]: 'Sy%'
+      }
+    }
   })
     .then(user => {
       res.json(user)
